@@ -13,9 +13,10 @@ class _GraphNodes:
         self.client = client
 
     def create(self, label: str, props: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        # Gateway contract: {"labels": [...], "properties": {...}}.
         response = self.client._client.post(
             "/graph/nodes",
-            json={"label": label, "properties": props or {}},
+            json={"labels": [label], "properties": props or {}},
         )
         return self.client._handle_response(response)
 
@@ -64,11 +65,16 @@ class _GraphEdges:
         type: str,
         props: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        # Gateway contract: {"src": ..., "dst": ..., "type": ..., "properties": {...}}.
         response = self.client._client.post(
             "/graph/edges",
-            json={"from": from_id, "to": to_id, "type": type, "properties": props or {}},
+            json={"src": from_id, "dst": to_id, "type": type, "properties": props or {}},
         )
         return self.client._handle_response(response)
+
+    def delete(self, id: str) -> None:
+        response = self.client._client.delete(f"/graph/edges/{id}")
+        self.client._handle_response(response)
 
 
 class _GraphIndexes:
@@ -149,7 +155,8 @@ class GraphClient:
         params: Optional[Dict[str, Any]] = None,
         graph: Optional[str] = None,
     ) -> Dict[str, Any]:
-        body: Dict[str, Any] = {"query": query, "params": params or {}}
+        # Gateway's MatchRequest contract is {"sql": <cypher>}.
+        body: Dict[str, Any] = {"sql": query}
         if graph:
             body["graph"] = graph
         response = self.client._client.post("/graph/match", json=body)
@@ -161,7 +168,7 @@ class GraphClient:
         params: Optional[Dict[str, Any]] = None,
         graph: Optional[str] = None,
     ) -> Dict[str, Any]:
-        body: Dict[str, Any] = {"query": query, "params": params or {}}
+        body: Dict[str, Any] = {"sql": query}
         if graph:
             body["graph"] = graph
         response = self.client._client.post("/graph/match/profile", json=body)

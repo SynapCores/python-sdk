@@ -22,13 +22,13 @@ def test_client_initialization():
     client = SynapCores(
         host="test.host",
         port=9090,
-        api_key="test-key",
+        api_key="ak_test-key",
         use_https=True,
     )
-    
+
     assert client.host == "test.host"
     assert client.port == 9090
-    assert client.api_key == "test-key"
+    assert client.api_key == "ak_test-key"
     assert client.use_https is True
     assert client.base_url == "https://test.host:9090/v1"
 

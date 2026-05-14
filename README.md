@@ -2,6 +2,14 @@
 
 Official Python SDK for SynapCores - The AI-Native Database Management System.
 
+> **0.2.1 — gateway response + graph fixes.** Bug-fix release: `_handle_response`
+> now unwraps the gateway's `{"data": …, "meta": …}` success envelope (so
+> `sql()` returns rows instead of an empty result) and tolerates empty `200`
+> bodies from `DELETE`; `QueryResult.columns` is populated with column names;
+> and the graph client matches the gateway contract — `nodes.create` sends
+> `labels`, `edges.create` sends `src`/`dst`, `graph.cypher()` sends `{"sql": …}`,
+> and `edges.delete()` was added.
+
 > **0.2.0 — gateway v1.5.0-ce alignment.** This release rewires every
 > module against the v1.5.0-ce route surface. AutoML moved from `/ai/*`
 > to `/automl/*`, vector ops collapsed onto `/vector-algebra/operation`,

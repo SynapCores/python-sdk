@@ -157,7 +157,7 @@ class SynapCores(VectorOperationsMixin):
         """
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "synapcores-python/0.2.0",
+            "User-Agent": "synapcores-python/0.2.1",
         }
         if self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
@@ -215,12 +215,26 @@ class SynapCores(VectorOperationsMixin):
             if header in self._client.headers:
                 del self._client.headers[header]
     
+    @staticmethod
+    def _unwrap(payload: Any) -> Any:
+        """Unwrap the gateway's ``{"data": ..., "meta": ...}`` success envelope.
+
+        The CE gateway wraps every 2xx body as ``{"data": <payload>,
+        "meta": {...}}``. Callers expect the payload directly, so peel
+        the envelope when its signature is present and leave any other
+        shape untouched.
+        """
+        if isinstance(payload, dict) and "data" in payload and "meta" in payload:
+            return payload["data"]
+        return payload
+
     def _handle_response(self, response: httpx.Response) -> Dict[str, Any]:
         """Handle HTTP response and errors."""
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 201:
-            return response.json()
+        if response.status_code in (200, 201):
+            # DELETE and some mutations return 200 with an empty body.
+            if not response.content:
+                return {}
+            return self._unwrap(response.json())
         elif response.status_code == 204:
             return {}
         elif response.status_code == 401:
@@ -388,7 +402,7 @@ class SynapCores(VectorOperationsMixin):
 
         result = QueryResult(
             rows=dict_rows,
-            columns=cols_raw,
+            columns=col_names,
             row_count=data.get("rows_affected") if data.get("rows_affected") is not None else len(dict_rows),
             took_ms=data.get("execution_time_ms") or data.get("took_ms") or 0,
             query_plan=data.get("query_plan"),

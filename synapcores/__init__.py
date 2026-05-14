@@ -69,7 +69,7 @@ from .mcp import McpClient
 from .recipes import RecipeClient
 from .schema import SchemaClient
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = [
     # Core Classes
     "SynapCores",
