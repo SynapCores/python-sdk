@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "synapcores"
-version = "0.2.1"
+version = "0.3.0"
 description = "Official Python SDK for SynapCores AI-Native Database"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -52,6 +52,10 @@ Homepage = "https://synapcores.com"
 Documentation = "https://synapcores.com/developers"
 Source = "https://github.com/SynapCores/python-sdk"
 Issues = "https://github.com/SynapCores/python-sdk/issues"
+
+[tool.setuptools.packages.find]
+include = ["synapcores*"]
+exclude = ["tests*", "examples*"]
 
 [tool.black]
 line-length = 88

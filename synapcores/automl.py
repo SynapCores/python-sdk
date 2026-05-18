@@ -122,12 +122,26 @@ class AutoMLClient:
         return AutoMLModel(self, model_info)
 
     def get_model(self, model_id: str) -> AutoMLModel:
-        """Fetch a trained model by id."""
-        response = self.client._client.get(f"/automl/models/{model_id}")
-        data = self.client._handle_response(response)
+        """Fetch a trained model by id.
+
+        v0.3.0: built-in / MCP-registered models (e.g. ``mcp_churn``)
+        expose ``/predict`` but no ``GET /models/{id}`` record. To stay
+        compatible, treat 404 as a stub: return a minimal ModelInfo and
+        let callers exercise ``predict`` / ``evaluate`` directly.
+        """
+        from .exceptions import NotFoundError  # local import to avoid cycles
+        try:
+            response = self.client._client.get(f"/automl/models/{model_id}")
+            data = self.client._handle_response(response)
+        except NotFoundError:
+            data = {}
+
+        if not isinstance(data, dict):
+            data = {}
+
         model_info = ModelInfo(
-            id=data.get("id") or model_id,
-            name=data.get("name") or "",
+            id=data.get("id") or data.get("model_id") or model_id,
+            name=data.get("name") or model_id,
             task=data.get("task") or "auto",
             status=data.get("status") or "ready",
             accuracy=data.get("accuracy"),
@@ -155,7 +169,15 @@ class AutoMLClient:
         )
         data = self.client._handle_response(response)
 
-        models = data.get("models") or data or []
+        # v0.3.0: gateway returns the model list directly (after envelope
+        # unwrap, ``data`` is the array). Older builds returned
+        # ``{"models": [...], "count": N}`` so accept both.
+        if isinstance(data, list):
+            models = data
+        elif isinstance(data, dict):
+            models = data.get("models") or data.get("items") or []
+        else:
+            models = []
         return [
             ModelInfo(
                 id=m.get("id") or m.get("model_id") or "",
@@ -193,7 +215,11 @@ class AutoMLClient:
             params["page_size"] = str(page_size)
         response = self.client._client.get("/automl/jobs", params=params)
         data = self.client._handle_response(response)
-        return data.get("jobs") or data or []
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return data.get("jobs") or data.get("items") or []
+        return []
 
     def cancel_training_job(self, job_id: str) -> None:
         """POST /automl/jobs/:id/stop"""

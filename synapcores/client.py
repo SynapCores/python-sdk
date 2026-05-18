@@ -157,7 +157,7 @@ class SynapCores(VectorOperationsMixin):
         """
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "synapcores-python/0.2.1",
+            "User-Agent": "synapcores-python/0.3.0",
         }
         if self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
@@ -331,16 +331,28 @@ class SynapCores(VectorOperationsMixin):
     def delete_collection(self, name: str) -> None:
         """
         Delete a collection.
-        
+
         Args:
             name: Collection name
         """
         response = self._client.delete(f"/collections/{name}")
         self._handle_response(response)
-        
+
         if name in self._collections_cache:
             del self._collections_cache[name]
-    
+
+    def collection(self, name: str) -> "VectorCollection":
+        """Return a thin wrapper bound to a named vector collection.
+
+        v0.3.0: mirrors the Node SDK's ``client.collection(name)`` accessor.
+        The returned object exposes ``vector_search`` (and a few sibling
+        helpers) wired to the gateway's
+        ``/v1/vectors/collections/{name}/...`` routes, which is distinct
+        from the document-store endpoints under ``/v1/collections/{name}``.
+        """
+        from .vector_collection import VectorCollection
+        return VectorCollection(self, name)
+
     def sql(
         self,
         query: str,

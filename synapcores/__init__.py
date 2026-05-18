@@ -6,6 +6,7 @@ Official Python SDK for SynapCores AI-Native Database Management System.
 
 from .client import SynapCores
 from .collection import Collection
+from .vector_collection import VectorCollection
 from .exceptions import (
     SynapCoresError,
     ConnectionError,
@@ -69,11 +70,12 @@ from .mcp import McpClient
 from .recipes import RecipeClient
 from .schema import SchemaClient
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __all__ = [
     # Core Classes
     "SynapCores",
     "Collection",
+    "VectorCollection",
 
     # v0.2.0 sub-clients
     "GraphClient",

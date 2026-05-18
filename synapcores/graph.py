@@ -118,23 +118,26 @@ class _GraphsApi:
         self.client = client
 
     def list(self) -> List[Dict[str, Any]]:
-        response = self.client._client.get("/graphs")
+        # v0.3.0: gateway mounts graphs-metadata API at /v1/graph/graphs.
+        response = self.client._client.get("/graph/graphs")
         data = self.client._handle_response(response)
-        return data.get("graphs") or data or []
+        if isinstance(data, dict):
+            return data.get("graphs") or data.get("items") or []
+        return data or []
 
     def create(self, name: str, description: Optional[str] = None) -> Dict[str, Any]:
         body: Dict[str, Any] = {"name": name}
         if description:
             body["description"] = description
-        response = self.client._client.post("/graphs", json=body)
+        response = self.client._client.post("/graph/graphs", json=body)
         return self.client._handle_response(response)
 
     def get(self, name: str) -> Dict[str, Any]:
-        response = self.client._client.get(f"/graphs/{name}")
+        response = self.client._client.get(f"/graph/graphs/{name}")
         return self.client._handle_response(response)
 
     def delete(self, name: str) -> None:
-        response = self.client._client.delete(f"/graphs/{name}")
+        response = self.client._client.delete(f"/graph/graphs/{name}")
         self.client._handle_response(response)
 
 
