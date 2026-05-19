@@ -17,7 +17,7 @@ from .models import (
     CollectionStats,
     SubscriptionEvent,
 )
-from .exceptions import ValidationError
+from .exceptions import ValidationError, NotFoundError
 from .subscription import Subscription
 
 if TYPE_CHECKING:
@@ -180,40 +180,65 @@ class Collection:
         filter: Optional[Dict[str, Any]] = None,
         distance_metric: str = "cosine",
     ) -> SearchResult:
-        """
-        Vector similarity search.
-        
+        """Vector similarity search.
+
+        v0.4.0 wire: ``POST /v1/vectors/collections/{name}/search`` with
+        ``{vector, k, include_metadata, filter?}``. The legacy
+        ``/v1/collections/{name}/vector_search`` route was removed in
+        gateway v1.6.0, so we always target the vector subsystem here.
+        Gateway response envelopes (``{data: [...], meta}`` /
+        ``{matches: [...]}``) are normalised into a :class:`SearchResult`.
+
         Args:
             vector: Query vector
-            field: Vector field name
+            field: Vector field name (kept for API parity; ignored on
+                the vector subsystem)
             top_k: Number of results
-            filter: Optional filter
-            distance_metric: Distance metric (cosine, euclidean, dot_product)
-            
+            filter: Optional filter forwarded as ``filter``
+            distance_metric: Distance metric (kept for API parity)
+
         Returns:
             Search results
         """
         if isinstance(vector, np.ndarray):
             vector = vector.tolist()
-        
-        params = VectorSearchParams(
-            vector=vector,
-            field=field,
-            top_k=top_k,
-            filter=filter,
-            distance_metric=distance_metric,
-        )
-        
+
+        body: Dict[str, Any] = {
+            "vector": list(vector),
+            "k": int(top_k),
+            "include_metadata": True,
+        }
+        if filter is not None:
+            body["filter"] = filter
+
         response = self.client._client.post(
-            f"{self._base_path}/vector_search",
-            json=params.model_dump(),
+            f"/vectors/collections/{self.name}/search",
+            json=body,
         )
         data = self.client._handle_response(response)
-        
+
+        # Gateway shapes seen in the wild:
+        #   [...]                               (bare array after unwrap)
+        #   {matches: [...]} / {results: [...]} / {documents: [...]}
+        # Normalise to SearchResult.
+        if isinstance(data, list):
+            matches: List[Dict[str, Any]] = data
+            total = len(data)
+            took_ms = 0
+        else:
+            matches = (
+                data.get("matches")
+                or data.get("results")
+                or data.get("documents")
+                or []
+            )
+            total = data.get("total", len(matches))
+            took_ms = data.get("took_ms", 0)
+
         return SearchResult(
-            documents=[Document(**doc) for doc in data["documents"]],
-            total=data["total"],
-            took_ms=data["took_ms"],
+            documents=[Document(**doc) for doc in matches],
+            total=total,
+            took_ms=took_ms,
         )
     
     def query(

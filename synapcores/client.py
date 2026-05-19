@@ -142,6 +142,9 @@ class SynapCores(VectorOperationsMixin):
 
         # Cache for collections
         self._collections_cache: Dict[str, Collection] = {}
+        # v0.4.0: separate cache for VectorCollection handles bound to
+        # the gateway's /v1/vectors/collections subsystem.
+        self._vector_collections_cache: Dict[str, Any] = {}
 
         # Transaction management
         self._current_transaction: Optional[TransactionContext] = None
@@ -151,18 +154,23 @@ class SynapCores(VectorOperationsMixin):
     def _build_headers(self) -> Dict[str, str]:
         """Build request headers.
 
-        v0.2.0: gateway expects API keys in the X-API-Key header (not
-        the Authorization header). JWT tokens still go through the
-        Bearer scheme.
+        v0.4.0: gateway v1.6.5.2-ce only honours
+        ``Authorization: Bearer <token>`` for both JWTs and AIDB-issued
+        API keys (``aidb_*`` / ``ak_*``). The earlier ``X-API-Key``
+        shim was rejected with HTTP 401 ``missing_authorization``,
+        forcing every caller to manually promote API keys into
+        ``jwt_token`` (OpenClaw v0.1.0 shipped that workaround).
+        Sending Bearer for every credential type makes the SDK match
+        the gateway and lets ``api_key='aidb_...'`` Just Work.
         """
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "synapcores-python/0.3.0",
+            "User-Agent": "synapcores-python/0.4.0",
         }
         if self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
         elif self.api_key:
-            headers["X-API-Key"] = self.api_key
+            headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
     # -----------------------------------------------------------------
@@ -274,13 +282,17 @@ class SynapCores(VectorOperationsMixin):
         **kwargs
     ) -> Collection:
         """
-        Create a new collection.
-        
+        Create a new **document-store** collection.
+
+        Wire: ``POST /v1/collections``. This is the document-collection
+        subsystem; for the vector subsystem see
+        :meth:`create_vector_collection`.
+
         Args:
             name: Collection name
             schema: Collection schema definition
             **kwargs: Additional collection options
-            
+
         Returns:
             Collection instance
         """
@@ -289,10 +301,10 @@ class SynapCores(VectorOperationsMixin):
             "schema": schema or {},
             **kwargs,
         }
-        
+
         response = self._client.post("/collections", json=payload)
         data = self._handle_response(response)
-        
+
         collection = Collection(self, name, data.get("schema"))
         self._collections_cache[name] = collection
         return collection
@@ -341,17 +353,118 @@ class SynapCores(VectorOperationsMixin):
         if name in self._collections_cache:
             del self._collections_cache[name]
 
-    def collection(self, name: str) -> "VectorCollection":
-        """Return a thin wrapper bound to a named vector collection.
+    def collection(self, name: str) -> Collection:
+        """Synchronous handle to a **document-store** collection.
 
-        v0.3.0: mirrors the Node SDK's ``client.collection(name)`` accessor.
-        The returned object exposes ``vector_search`` (and a few sibling
-        helpers) wired to the gateway's
-        ``/v1/vectors/collections/{name}/...`` routes, which is distinct
-        from the document-store endpoints under ``/v1/collections/{name}``.
+        Returns a cached :class:`Collection` bound to
+        ``/v1/collections/{name}``. Does not round-trip to the gateway,
+        so use it when you already know the collection exists.
+
+        v0.4.0 split: this targets the document subsystem; use
+        :meth:`vector_collection` for the
+        ``/v1/vectors/collections/{name}`` subsystem. For 0.3.0 callers
+        that relied on ``client.collection(name).vector_search(...)``,
+        :class:`Collection` still exposes ``vector_search`` and routes
+        it through the vector subsystem internally.
+        """
+        cached = self._collections_cache.get(name)
+        if cached is not None:
+            return cached
+        coll = Collection(self, name)
+        self._collections_cache[name] = coll
+        return coll
+
+    # =================================================================
+    # VECTOR COLLECTIONS — /v1/vectors/collections/{name}
+    # =================================================================
+
+    def create_vector_collection(
+        self,
+        name: str,
+        dimensions: int,
+        distance_metric: str = "cosine",
+    ) -> "VectorCollection":
+        """Create a vector collection.
+
+        Wire: ``POST /v1/vectors/collections`` with
+        ``{name, dimensions, distance_metric}``. Distinct from
+        :meth:`create_collection` which targets the document-store
+        subsystem.
+
+        Args:
+            name: Collection name.
+            dimensions: Embedding dimensionality. Must match the vectors
+                that will be inserted.
+            distance_metric: One of ``cosine`` (default), ``l2``, ``dot``.
+
+        Returns:
+            :class:`VectorCollection` bound to the new collection.
+
+        Example::
+
+            coll = client.create_vector_collection(
+                name="memory_v1",
+                dimensions=1536,
+                distance_metric="cosine",
+            )
+            coll.insert([{"id": "v1", "values": [...], "metadata": {...}}])
         """
         from .vector_collection import VectorCollection
-        return VectorCollection(self, name)
+
+        payload = {
+            "name": name,
+            "dimensions": int(dimensions),
+            "distance_metric": distance_metric,
+        }
+        response = self._client.post("/vectors/collections", json=payload)
+        self._handle_response(response)
+        coll = VectorCollection(self, name)
+        self._vector_collections_cache[name] = coll
+        return coll
+
+    def vector_collection(self, name: str) -> "VectorCollection":
+        """Synchronous handle to a vector collection.
+
+        Returns a cached :class:`VectorCollection` bound to
+        ``/v1/vectors/collections/{name}``. Does not round-trip to the
+        gateway. Use :meth:`create_vector_collection` if you need to
+        provision the collection first.
+
+        v0.4.0: introduced so users have an explicit handle for the
+        vector subsystem (distinct from :meth:`collection`, which
+        targets the document-store subsystem).
+        """
+        from .vector_collection import VectorCollection
+
+        cached = self._vector_collections_cache.get(name)
+        if cached is not None:
+            return cached
+        coll = VectorCollection(self, name)
+        self._vector_collections_cache[name] = coll
+        return coll
+
+    def list_vector_collections(self) -> List[Dict[str, Any]]:
+        """List vector collections.
+
+        Wire: ``GET /v1/vectors/collections``. Returns the bare array
+        of collection-info dicts (gateway envelope unwrapped).
+        """
+        response = self._client.get("/vectors/collections")
+        data = self._handle_response(response)
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return data.get("items") or data.get("collections") or []
+        return []
+
+    def delete_vector_collection(self, name: str) -> None:
+        """Delete a vector collection.
+
+        Wire: ``DELETE /v1/vectors/collections/{name}``.
+        """
+        response = self._client.delete(f"/vectors/collections/{name}")
+        self._handle_response(response)
+        self._vector_collections_cache.pop(name, None)
 
     def sql(
         self,

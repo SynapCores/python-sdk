@@ -2,6 +2,16 @@
 
 Official Python SDK for SynapCores - The AI-Native Database Management System.
 
+> **0.4.0 — vector-subsystem + auth alignment with gateway v1.6.5.2-ce.**
+> Closes three wire-format gaps the OpenClaw v0.1.0 integration hit:
+> (a) `api_key='aidb_...'` now sends `Authorization: Bearer` instead of the
+> rejected `X-API-Key` header; (b) `client.create_vector_collection(name,
+> dimensions, distance_metric)` provisions on the **vector subsystem**
+> (not the document-store one); (c) the new
+> `client.vector_collection(name).insert(...)` / `.search(...)` round-trip
+> hits `/v1/vectors/collections/{name}/...` end-to-end. See CHANGELOG.md.
+> Verified against gateway v1.6.5.2-ce. Validation: 11/12 PASS.
+
 > **0.2.1 — gateway response + graph fixes.** Bug-fix release: `_handle_response`
 > now unwraps the gateway's `{"data": …, "meta": …}` success envelope (so
 > `sql()` returns rows instead of an empty result) and tolerates empty `200`

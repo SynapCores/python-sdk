@@ -57,12 +57,20 @@ class Schema(BaseModel):
 
 
 class Document(BaseModel):
-    """Document model."""
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+    """Document model.
+
+    v0.4.0: ``data`` is now optional so the same model can hold either
+    a document-store row (``{id, data, ...}``) or a vector-collection
+    hit (``{id, values, metadata, score}``). Hit-shaped payloads carry
+    their embedding in ``values`` rather than ``data``.
+    """
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+
     id: Optional[str] = None
-    data: Dict[str, Any]
+    data: Optional[Dict[str, Any]] = None
     score: Optional[float] = None
+    distance: Optional[float] = None
+    values: Optional[List[float]] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
