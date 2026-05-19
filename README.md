@@ -1,5 +1,8 @@
 # SynapCores Python SDK
 
+> **Questions or feedback?** Join the [SynapCores community discussions](https://github.com/SynapCores/synapcores-docs/discussions) — single hub for the engine, both SDKs, OpenClaw plugin, and demos.
+
+
 Official Python SDK for SynapCores - The AI-Native Database Management System.
 
 > **0.2.1 — gateway response + graph fixes.** Bug-fix release: `_handle_response`
