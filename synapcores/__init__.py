@@ -23,6 +23,7 @@ from .exceptions import (
     ConstraintError,
     PreparedStatementError,
 )
+from .memory import MemoryClient, MemoryRecord, MemoryError
 from .models import (
     Document,
     QueryResult,
@@ -69,7 +70,7 @@ from .mcp import McpClient
 from .recipes import RecipeClient
 from .schema import SchemaClient
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __all__ = [
     # Core Classes
     "SynapCores",
@@ -87,6 +88,9 @@ __all__ = [
     "McpClient",
     "RecipeClient",
     "SchemaClient",
+    "MemoryClient",
+    "MemoryRecord",
+    "MemoryError",
 
     # Models
     "Document",

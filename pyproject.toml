@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "synapcores"
-version = "0.2.1"
+version = "0.3.0"
 description = "Official Python SDK for SynapCores AI-Native Database"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -67,3 +67,6 @@ disallow_untyped_defs = true
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = "--strict-markers --cov=synapcores"
+markers = [
+    "live: integration tests that require a running SynapCores engine (set SYNAPCORES_TEST_LIVE=1)",
+]

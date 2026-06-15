@@ -5,6 +5,21 @@
 
 Official Python SDK for SynapCores - The AI-Native Database Management System.
 
+> **0.3.0 — agent memory.** New `client.memory` sub-client wraps the
+> v1.8.5+ engine's `MEMORY_STORE` / `MEMORY_RECALL` / `MEMORY_FORGET`
+> SQL functions. Namespaced store, semantic recall with similarity,
+> and id-based forget — the surface the OSS aerospace-rca demo, the
+> OpenClaw plugin, and the planned Hermes plugin all share.
+>
+> ```python
+> # Agent memory
+> mem_id = client.memory.store("default", "User prefers Python")
+> hits = client.memory.recall(
+>     "default", "preferred programming language", top_k=3
+> )
+> client.memory.forget("default", mem_id)
+> ```
+
 > **0.2.1 — gateway response + graph fixes.** Bug-fix release: `_handle_response`
 > now unwraps the gateway's `{"data": …, "meta": …}` success envelope (so
 > `sql()` returns rows instead of an empty result) and tolerates empty `200`

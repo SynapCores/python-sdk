@@ -128,6 +128,7 @@ class SynapCores(VectorOperationsMixin):
         from .mcp import McpClient
         from .recipes import RecipeClient
         from .schema import SchemaClient
+        from .memory import MemoryClient
 
         self.graph = GraphClient(self)
         self.nl2sql = NL2SqlClient(self)
@@ -139,6 +140,7 @@ class SynapCores(VectorOperationsMixin):
         self.mcp = McpClient(self)
         self.recipes = RecipeClient(self)
         self.schema = SchemaClient(self)
+        self.memory: MemoryClient = MemoryClient(self)
 
         # Cache for collections
         self._collections_cache: Dict[str, Collection] = {}
@@ -157,7 +159,7 @@ class SynapCores(VectorOperationsMixin):
         """
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "synapcores-python/0.2.1",
+            "User-Agent": "synapcores-python/0.3.0",
         }
         if self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
