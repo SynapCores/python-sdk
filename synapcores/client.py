@@ -153,9 +153,9 @@ class SynapCores(VectorOperationsMixin):
     def _build_headers(self) -> Dict[str, str]:
         """Build request headers.
 
-        v0.2.0: gateway expects API keys in the X-API-Key header (not
-        the Authorization header). JWT tokens still go through the
-        Bearer scheme.
+        v0.3.0: API keys ride Authorization: Bearer (the gateway's only
+        accepted scheme on v1.8.5+; X-API-Key was dropped). JWT tokens
+        always used Bearer.
         """
         headers = {
             "Content-Type": "application/json",
@@ -164,7 +164,7 @@ class SynapCores(VectorOperationsMixin):
         if self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
         elif self.api_key:
-            headers["X-API-Key"] = self.api_key
+            headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
     # -----------------------------------------------------------------
