@@ -159,7 +159,7 @@ class SynapCores(VectorOperationsMixin):
         """
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "synapcores-python/0.3.0",
+            "User-Agent": "synapcores-python/0.5.0",
         }
         if self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
